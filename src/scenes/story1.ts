@@ -1,6 +1,6 @@
 // 장면 I–VII : 나무 아래에서 블레이크의 죽음까지
-import { R, P, W, H, disc, line, hash, span, smooth, ease, clamp, lerp } from '../core/gfx';
-import { soldier, tree, cherryTree, felledCherry, plane, wire, crow, rat, fire, smoke, blast, sandbags, revetment, duckboard, PAL } from '../art/sprites';
+import { R, P, W, H, disc, line, hash, span, smooth, ease, clamp, lerp, makeCanvas, Ctx } from '../core/gfx';
+import { soldier, OUTLINE, tree, cherryTree, felledCherry, plane, wire, crow, rat, fire, smoke, blast, sandbags, revetment, duckboard, PAL } from '../art/sprites';
 import { sky, ridge, clouds, grassField, mudStrip, haze, shade } from '../art/env';
 import type { StoryScene } from './types';
 
@@ -433,6 +433,33 @@ export const sceneFarm: StoryScene = {
 };
 
 // ── VII. 블레이크 ────────────────────────────────────
+// 인물을 1배로 그린 뒤 2배로 키우고, 확대된 그림 둘레에 1px 외곽선을 두른다.
+// (확대 전에 외곽선을 그리면 선도 2px로 굵어진다)
+const CU_W = 80, CU_H = 32, CU_OX = 40, CU_OY = 30;
+const cuSmall = makeCanvas(CU_W, CU_H);
+const cuBig = makeCanvas(CU_W * 2, CU_H * 2);
+const cuSil = makeCanvas(CU_W * 2, CU_H * 2);
+const cuRing = makeCanvas(CU_W * 2 + 2, CU_H * 2 + 2);
+function closeUp(g: Ctx, x: number, y: number, draw: (c: Ctx, x: number, y: number) => void): void {
+  cuSmall.g.clearRect(0, 0, CU_W, CU_H);
+  draw(cuSmall.g, CU_OX, CU_OY);
+  cuBig.g.clearRect(0, 0, CU_W * 2, CU_H * 2);
+  cuBig.g.drawImage(cuSmall.c, 0, 0, CU_W * 2, CU_H * 2);
+  cuSil.g.clearRect(0, 0, CU_W * 2, CU_H * 2);
+  cuSil.g.drawImage(cuBig.c, 0, 0);
+  cuSil.g.globalCompositeOperation = 'source-in';
+  R(cuSil.g, 0, 0, CU_W * 2, CU_H * 2, OUTLINE);
+  cuSil.g.globalCompositeOperation = 'source-over';
+  cuRing.g.clearRect(0, 0, CU_W * 2 + 2, CU_H * 2 + 2);
+  for (const [dx, dy] of [[0, 1], [2, 1], [1, 0], [1, 2]]) cuRing.g.drawImage(cuSil.c, dx, dy);
+  const left = x - CU_OX * 2, top = y - CU_OY * 2;
+  g.save();
+  g.globalAlpha = 0.9;
+  g.drawImage(cuRing.c, left - 1, top - 1);
+  g.restore();
+  g.drawImage(cuBig.c, left, top);
+}
+
 export const sceneBlake: StoryScene = {
   kind: 'story',
   num: 7,
@@ -457,13 +484,22 @@ export const sceneBlake: StoryScene = {
     for (let y = 60; y < 90; y += 6) for (let x = (y % 12) * 1.5; x < W; x += 14) R(g, x, y, 12, 5, hash(x * 3 + y) < 0.5 ? '#8b8475' : '#6f695c');
     grassField(g, t, 0, 90, H, '#566136', '#6d7a41', '#8c9a55', [], 0.5);
     smoke(g, 270, 60, t, 2, '#3d3833', 1.3, 3);
-    // 누운 블레이크 (크게: 2배 스케일로 그린다)
+    // 배경을 가라앉혀 두 사람에게 빛이 모이게 한다
+    const spot = g.createRadialGradient(165, 135, 20, 165, 135, 200);
+    spot.addColorStop(0, 'rgba(0,0,0,0.05)');
+    spot.addColorStop(1, 'rgba(0,0,0,0.5)');
+    g.fillStyle = spot;
+    g.fillRect(0, 0, W, H);
+    haze(g, '#1a1a12', 0.22, 90, H);
+    // 누운 블레이크와 스코필드 (2배 확대, 외곽선은 확대 뒤에 1px로)
     g.save();
-    g.translate(160, 150);
-    g.scale(2, 2);
-    soldier(g, 12, 0, { pose: 'lie', face: -1, bare: true, outline: false });
-    soldier(g, -14, 0, { pose: 'kneel', face: 1, rifle: false, mark: true, outline: false });
+    g.globalAlpha = 0.4;
+    disc(g, 164, 151, 30, '#000000', 0.22);
     g.restore();
+    closeUp(g, 160, 150, (c, x, y) => {
+      soldier(c, x + 12, y, { pose: 'lie', face: -1, bare: true, outline: false });
+      soldier(c, x - 14, y, { pose: 'kneel', face: 1, rifle: false, mark: true, outline: false, shadow: false });
+    });
     // 흩날리는 벚꽃
     for (let i = 0; i < 26; i++) {
       const life = (t * 0.05 + hash(i * 7)) % 1;
