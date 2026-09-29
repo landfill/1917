@@ -13,6 +13,8 @@ const SCENES: Scene[] = [
   sceneFarm, sceneBlake, sceneBridge, sceneEcoust, sceneCellar,
   sceneRiver, sceneForest, sceneRun, sceneDelivery, sceneEnding,
 ];
+const IS_TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+if (IS_TOUCH) document.documentElement.classList.add('touch');
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV'];
 
 const LETTER = '내일 새벽으로 예정된 공격을 즉시 중지할 것.\n적은 퇴각한 것이 아니다. 우리를 기다리고 있다.\n이 명령이 새벽 전에 닿지 않으면 1,600명을 잃는다.';
@@ -44,6 +46,8 @@ const ui = {
   chapterList: $('chapterList'),
   gameIntro: $('gameIntro'),
   mute: $('btnMute'),
+  home: $('btnHome'),
+  skip: $('btnSkip'),
   joy: $('joy'),
   joyKnob: $('joyKnob'),
   sprint: $('sprintZone'),
@@ -93,7 +97,8 @@ const START: Record<Transition, number> = { pan: 0, tilt: 0, flash: 0.5, cut: 0.
 
 // ── 입력 ───────────────────────────────────────────────
 const keys = new Set<string>();
-const touch = { id: -1, ax: 0, ay: 0, x: 0, y: 0, sprintId: -1 };
+/** 게임 조작용 손가락/마우스. id는 't3'(터치) 또는 'p1'(마우스) 형태, 비어 있으면 '' */
+const touch = { id: '', ax: 0, ay: 0, x: 0, y: 0, sprintId: '' };
 
 function input(): InputState {
   let x = 0, y = 0;
@@ -101,16 +106,16 @@ function input(): InputState {
   if (keys.has('ArrowRight') || keys.has('KeyD')) x += 1;
   if (keys.has('ArrowUp') || keys.has('KeyW')) y -= 1;
   if (keys.has('ArrowDown') || keys.has('KeyS')) y += 1;
-  if (touch.id >= 0) {
+  if (touch.id) {
     const dx = touch.x - touch.ax, dy = touch.y - touch.ay;
     const len = Math.hypot(dx, dy);
     if (len > 6) {
-      const k = Math.min(1, len / 45);
+      const k = Math.min(1, len / 40);
       x = (dx / len) * k;
       y = (dy / len) * k;
     }
   }
-  const sprint = keys.has('ShiftLeft') || keys.has('ShiftRight') || keys.has('Space') || touch.sprintId >= 0;
+  const sprint = keys.has('ShiftLeft') || keys.has('ShiftRight') || keys.has('Space') || touch.sprintId !== '';
   return { x, y, sprint };
 }
 
@@ -121,58 +126,115 @@ window.addEventListener('keydown', (e) => {
   audio.init();
   if (e.code === 'KeyM') toggleMute();
   if (e.repeat) return;
+  if (e.code === 'Escape' && mode !== 'title') { goHome(); return; }
   if (mode === 'title' && e.code === 'Space') holding = true;
   else if (mode === 'letter' && (e.code === 'Space' || e.code === 'Enter')) beginJourney();
   else if (mode === 'play' && isStory() && (e.code === 'Space' || e.code === 'Enter')) advance();
-  else if (mode === 'play' && isStory() && (e.code === 'KeyN' || e.code === 'ArrowRight')) nextScene();
+  else if (mode === 'play' && isStory() && (e.code === 'KeyN' || e.code === 'ArrowRight')) skipScene();
   else if (mode === 'gameover' && (e.code === 'Enter' || e.code === 'KeyR')) retry();
 });
 window.addEventListener('keyup', (e) => {
   keys.delete(e.code);
   if (e.code === 'Space') holding = false;
 });
-window.addEventListener('blur', () => { keys.clear(); holding = false; });
+window.addEventListener('blur', () => { keys.clear(); holding = false; releaseAll(); });
 
-const isPanelTarget = (e: Event) => (e.target as HTMLElement).closest('button, .panel') !== null;
+const isUiTarget = (t: EventTarget | null) => t instanceof Element && t.closest('button, .panel') !== null;
+const inGame = () => mode === 'play' && SCENES[cur.idx].kind === 'game';
+
+// 조이스틱의 기본 자리 (왼쪽 아래)
+function joyHome(): { x: number; y: number } {
+  return { x: 80, y: window.innerHeight - 90 };
+}
+function placeJoy(x: number, y: number, dx = 0, dy = 0): void {
+  ui.joy.style.left = x + 'px';
+  ui.joy.style.top = y + 'px';
+  ui.joyKnob.style.transform = dx || dy ? `translate(${dx}px, ${dy}px)` : '';
+}
+function showTouchControls(on: boolean): void {
+  const show = on && IS_TOUCH;
+  ui.joy.hidden = !show;
+  ui.sprint.hidden = !show;
+  if (show && !touch.id) {
+    const h = joyHome();
+    placeJoy(h.x, h.y);
+    ui.joy.classList.add('idle');
+  }
+}
+
+function pressGame(id: string, cx: number, cy: number): void {
+  audio.init();
+  if (cx < window.innerWidth * 0.55) {
+    if (touch.id) return;
+    touch.id = id;
+    touch.ax = touch.x = cx;
+    touch.ay = touch.y = cy;
+    ui.joy.classList.remove('idle');
+    placeJoy(cx, cy);
+  } else if (!touch.sprintId) {
+    touch.sprintId = id;
+    ui.sprint.classList.add('on');
+  }
+}
+function moveGame(id: string, cx: number, cy: number): void {
+  if (id !== touch.id) return;
+  touch.x = cx;
+  touch.y = cy;
+  let dx = cx - touch.ax, dy = cy - touch.ay;
+  const len = Math.hypot(dx, dy);
+  if (len > 45) { dx = (dx / len) * 45; dy = (dy / len) * 45; }
+  placeJoy(touch.ax, touch.ay, dx, dy);
+}
+function releaseGame(id: string): void {
+  if (id === touch.id) {
+    touch.id = '';
+    const h = joyHome();
+    placeJoy(h.x, h.y);
+    ui.joy.classList.add('idle');
+  }
+  if (id === touch.sprintId) {
+    touch.sprintId = '';
+    ui.sprint.classList.remove('on');
+  }
+}
+function releaseAll(): void {
+  if (touch.id) releaseGame(touch.id);
+  if (touch.sprintId) releaseGame(touch.sprintId);
+}
+
+// 터치: 게임 조작은 Touch Events로 직접 받는다 (스크롤·취소에 끊기지 않도록 기본 동작을 막는다)
+document.addEventListener('touchstart', (e) => {
+  if (!inGame() || isUiTarget(e.target)) return;
+  e.preventDefault();
+  for (const t of Array.from(e.changedTouches)) pressGame('t' + t.identifier, t.clientX, t.clientY);
+}, { passive: false });
+document.addEventListener('touchmove', (e) => {
+  if (!inGame()) return;
+  e.preventDefault();
+  for (const t of Array.from(e.changedTouches)) moveGame('t' + t.identifier, t.clientX, t.clientY);
+}, { passive: false });
+const touchEnd = (e: TouchEvent) => {
+  for (const t of Array.from(e.changedTouches)) releaseGame('t' + t.identifier);
+};
+document.addEventListener('touchend', touchEnd);
+document.addEventListener('touchcancel', touchEnd);
 
 document.addEventListener('pointerdown', (e) => {
-  if (isPanelTarget(e)) return;
+  if (isUiTarget(e.target)) return;
   audio.init();
   if (mode === 'title') { holding = true; return; }
   if (mode === 'letter') { beginJourney(); return; }
   if (mode !== 'play') return;
-  const s = SCENES[cur.idx];
-  if (s.kind === 'story') { advance(); return; }
-  // 게임: 왼쪽은 이동 스틱, 오른쪽은 질주
-  if (e.clientX < window.innerWidth * 0.55) {
-    if (touch.id < 0) {
-      touch.id = e.pointerId;
-      touch.ax = touch.x = e.clientX;
-      touch.ay = touch.y = e.clientY;
-      ui.joy.hidden = false;
-      ui.joy.style.left = e.clientX + 'px';
-      ui.joy.style.top = e.clientY + 'px';
-      ui.joyKnob.style.transform = '';
-    }
-  } else if (touch.sprintId < 0) {
-    touch.sprintId = e.pointerId;
-    ui.sprint.classList.add('on');
-  }
+  if (isStory()) { advance(); return; }
+  // 게임: 마우스는 끌어서 이동 (터치는 위의 Touch Events가 처리)
+  if (e.pointerType === 'mouse') pressGame('p' + e.pointerId, e.clientX, e.clientY);
 });
 document.addEventListener('pointermove', (e) => {
-  if (e.pointerId === touch.id) {
-    touch.x = e.clientX;
-    touch.y = e.clientY;
-    let dx = touch.x - touch.ax, dy = touch.y - touch.ay;
-    const len = Math.hypot(dx, dy);
-    if (len > 45) { dx = (dx / len) * 45; dy = (dy / len) * 45; }
-    ui.joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
-  }
+  if (e.pointerType === 'mouse') moveGame('p' + e.pointerId, e.clientX, e.clientY);
 });
 const release = (e: PointerEvent) => {
   if (mode === 'title') holding = false;
-  if (e.pointerId === touch.id) { touch.id = -1; ui.joy.hidden = true; }
-  if (e.pointerId === touch.sprintId) { touch.sprintId = -1; ui.sprint.classList.remove('on'); }
+  if (e.pointerType === 'mouse') releaseGame('p' + e.pointerId);
 };
 document.addEventListener('pointerup', release);
 document.addEventListener('pointercancel', release);
@@ -184,9 +246,13 @@ function toggleMute(): void {
   ui.mute.setAttribute('aria-label', audio.muted ? '소리 켜기' : '소리 끄기');
 }
 ui.mute.addEventListener('click', () => { audio.init(); toggleMute(); });
+ui.home.addEventListener('click', goHome);
+ui.skip.addEventListener('click', skipScene);
+$('btnGo').addEventListener('click', () => { audio.init(); beginJourney(true); });
+ui.letter.addEventListener('click', (e) => { if (!(e.target as Element).closest('button')) beginJourney(); });
 
 $('btnRetry').addEventListener('click', retry);
-$('btnSkipRun').addEventListener('click', () => { ui.fail.hidden = true; mode = 'play'; nextScene(); });
+$('btnSkipRun').addEventListener('click', () => { ui.fail.hidden = true; mode = 'play'; skipScene(); });
 $('btnAgain').addEventListener('click', () => { ui.end.hidden = true; toTitle(); });
 $('btnRunAgain').addEventListener('click', () => { ui.end.hidden = true; jumpTo(SCENES.indexOf(sceneRun)); });
 $('btnChapters').addEventListener('click', () => { audio.init(); ui.chapters.hidden = false; });
@@ -202,6 +268,7 @@ SCENES.forEach((s, i) => {
 });
 
 // ── 흐름 ───────────────────────────────────────────────
+let typeTimer = 0;
 function isStory(): boolean {
   return SCENES[cur.idx].kind === 'story';
 }
@@ -210,15 +277,42 @@ function toTitle(): void {
   mode = 'title';
   title.reset();
   trans = null;
+  holding = false;
+  window.clearInterval(typeTimer);
+  releaseAll();
+  showTouchControls(false);
   ui.titleUi.hidden = false;
   ui.hud.hidden = true;
+  ui.hud.classList.remove('dim');
+  ui.stage.classList.remove('compact');
   ui.letter.hidden = true;
+  ui.fail.hidden = true;
+  ui.end.hidden = true;
+  ui.chapters.hidden = true;
   ui.gameIntro.hidden = true;
+  ui.home.hidden = true;
+  ui.skip.hidden = true;
   setCaption(null);
   audio.setMood('title');
 }
 
-let typeTimer = 0;
+/** 어디서든 시작 화면(봉인된 명령서)으로 돌아간다 */
+function goHome(): void {
+  audio.init();
+  toTitle();
+}
+
+/** 지금 장면을 끝내고 다음 장면으로. 전환 중이면 전환을 마저 끝내고 넘어간다 */
+function skipScene(): void {
+  if (mode !== 'play') return;
+  if (trans) {
+    trans = null;
+    audio.setMood(SCENES[cur.idx].mood, 0.3);
+  }
+  releaseAll();
+  nextScene();
+}
+
 function showLetter(): void {
   mode = 'letter';
   letterAt = clock;
@@ -235,8 +329,8 @@ function showLetter(): void {
   }, 42);
 }
 
-function beginJourney(): void {
-  if (mode !== 'letter' || clock - letterAt < 0.6) return;
+function beginJourney(force = false): void {
+  if (mode !== 'letter' || (!force && clock - letterAt < 0.6)) return;
   window.clearInterval(typeTimer);
   ui.letter.hidden = true;
   audio.whistle(1.1, 0.1);
@@ -267,6 +361,12 @@ function startScene(i: number, kindOverride?: Transition | 'fromTitle', fresh = 
     s.reset(fx, fails);
     gameResult = 'play';
   }
+  releaseAll();
+  showTouchControls(s.kind === 'game');
+  ui.hud.classList.toggle('dim', s.kind === 'game');
+  ui.stage.classList.toggle('compact', s.kind === 'game');
+  ui.home.hidden = false;
+  ui.skip.hidden = false;
   updateHud();
 }
 
@@ -279,6 +379,10 @@ function nextScene(): void {
 function finish(): void {
   mode = 'end';
   setCaption(null);
+  showTouchControls(false);
+  ui.stage.classList.remove('compact');
+  ui.skip.hidden = true;
+  ui.home.hidden = false;
   ui.hud.hidden = true;
   ui.end.hidden = false;
   audio.setMood('title', 4);
@@ -286,7 +390,10 @@ function finish(): void {
 
 /** 클릭: 다음 자막으로, 자막이 끝났으면 다음 장면으로 */
 function advance(): void {
-  if (trans) return;
+  if (trans) {
+    if (trans.p < trans.startAt) trans.p = trans.startAt;
+    return;
+  }
   const s = SCENES[cur.idx] as StoryScene;
   const nextLine = s.lines.find((l) => l.t > cur.t + 0.05);
   if (nextLine) {
@@ -300,6 +407,8 @@ function retry(): void {
   ui.fail.hidden = true;
   fails++;
   sceneRun.reset(fx, fails);
+  showTouchControls(true);
+  ui.skip.hidden = false;
   gameResult = 'play';
   cur.t = 0;
   mode = 'play';
@@ -380,8 +489,6 @@ function update(dt: number): void {
     cur.t += dt;
     const st = s.status();
     ui.gameIntro.hidden = st.started || mode !== 'play';
-    ui.hud.classList.toggle('dim', true);
-    ui.sprint.hidden = !(matchMedia('(pointer: coarse)').matches && mode === 'play');
     if (mode === 'play' && gameResult === 'play') {
       gameResult = s.update(dt, input(), fx);
       if (gameResult === 'lose') {
@@ -390,10 +497,12 @@ function update(dt: number): void {
         ui.failReason.textContent = st.reason || s.status().reason;
         ui.failNote.textContent = fails >= 1 ? '다시 달릴 때마다 시간이 조금 더 주어지고 포격이 약해집니다.' : 'Shift(모바일은 오른쪽 버튼)로 전력 질주할 수 있습니다. 포탄이 떨어질 자리에 붉은 표시가 깜박입니다.';
         audio.setMood('grief', 1.2);
-        ui.sprint.hidden = true;
+        releaseAll();
+        showTouchControls(false);
+        ui.skip.hidden = true;
       } else if (gameResult === 'win') {
         audio.whistle(1.5, 0.12);
-        ui.sprint.hidden = true;
+        releaseAll();
         ui.hud.classList.remove('dim');
         nextScene();
       }
@@ -606,4 +715,5 @@ requestAnimationFrame(frame);
   },
   hold() { holding = true; },
   state: () => ({ mode, idx: cur.idx, t: cur.t, trans: trans?.kind ?? null }),
+  game: () => sceneRun.status(),
 };

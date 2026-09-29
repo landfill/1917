@@ -385,7 +385,7 @@ function drawHud(g: Ctx, t: number): void {
   R(g, 8, 20, 32, 3, '#1a1512');
   R(g, 8, 20, Math.round(32 * st.p.stamina), 3, st.p.stamina > 0.25 ? '#d9c38a' : '#b5553a');
   // 진행 막대
-  const bx = 70, bw = 180;
+  const bx = 70, bw = 125;
   R(g, bx, 10, bw, 2, '#1a1512');
   R(g, bx, 10, Math.round(bw * progress()), 2, '#d9c38a');
   R(g, bx + bw - 1, 6, 2, 8, '#8f2d25');

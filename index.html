@@ -15,9 +15,8 @@
         <div id="hud" hidden>
           <div class="chapter">
             <span id="hudNum" class="num"></span>
-            <span class="names"><b id="hudTitle"></b><i id="hudEn"></i></span>
+            <span class="names"><b id="hudTitle"></b><i id="hudEn"></i><span id="hudClock" class="clock"></span></span>
           </div>
-          <div id="hudClock" class="clock"></div>
           <div id="hudRail" class="rail"></div>
         </div>
 
@@ -38,13 +37,17 @@
           <p class="big">데번셔 연대 2대대의 참호. 1차 공격이 이미 시작되었다.</p>
           <p>포탄과 돌격하는 병사들을 피해 <b>오른쪽 끝의 매켄지 대령</b>에게 달려라.</p>
           <p class="keys"><kbd>←↑↓→</kbd>/<kbd>WASD</kbd> 이동 · <kbd>Shift</kbd>/<kbd>Space</kbd> 전력 질주</p>
-          <p class="keys touchOnly">화면 왼쪽을 끌어 이동 · 오른쪽을 누르고 있으면 전력 질주</p>
+          <p class="keys touchOnly">왼쪽 아래 스틱(화면 왼쪽 아무 곳)을 끌어 이동 · 오른쪽 아래 <b>질주</b> 버튼(화면 오른쪽)을 누르고 있으면 전력 질주</p>
         </div>
 
-        <button id="btnMute" type="button" class="iconBtn" aria-label="소리 끄기" title="소리 (M)">♪</button>
+        <div class="topBar">
+          <button id="btnHome" type="button" hidden title="처음으로 (Esc)" aria-label="처음으로"><span aria-hidden="true">⌂</span><span class="lb">처음으로</span></button>
+          <button id="btnSkip" type="button" hidden title="다음 장면 (→)" aria-label="건너뛰기"><span class="lb">건너뛰기</span><span aria-hidden="true">▸▸</span></button>
+          <button id="btnMute" type="button" class="iconBtn" aria-label="소리 끄기" title="소리 (M)">♪</button>
+        </div>
       </div>
 
-      <div id="joy" hidden><div id="joyKnob"></div></div>
+      <div id="joy" hidden><div id="joyKnob"></div><span>이동</span></div>
       <div id="sprintZone" hidden>질주</div>
 
       <div id="letter" class="panel paper" hidden>
@@ -53,7 +56,7 @@
         <p id="letterBody" class="body"></p>
         <p class="sign">— 에린모어 장군</p>
         <p class="bearer">전달자: 블레이크 상병, 스코필드 상병</p>
-        <p class="tap">눌러서 출발</p>
+        <button id="btnGo" type="button" class="primary go">명령을 받고 출발한다</button>
       </div>
 
       <div id="failPanel" class="panel dark" hidden>
