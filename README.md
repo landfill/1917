@@ -13,6 +13,11 @@ npm run build    # dist/ 에 빌드 + 단일 파일 dist/1917.html
 
 `dist/1917.html`은 파일 하나로 되어 있어 브라우저로 바로 열 수 있습니다.
 
+## 배포
+
+`main` 브랜치에 푸시하면 Vercel이 프로덕션으로 배포합니다. 빌드 설정은 `vercel.json`에 있습니다
+(`npm run build` → `dist/`).
+
 ## 흐름
 
 | # | 장면 | 전환 |
