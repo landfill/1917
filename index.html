@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0a0c" />
+    <title>1917 픽셀</title>
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <div id="app">
+      <div id="stage">
+        <canvas id="screen" width="320" height="180" aria-label="1917 픽셀 장면"></canvas>
+
+        <div id="hud" hidden>
+          <div class="chapter">
+            <span id="hudNum" class="num"></span>
+            <span class="names"><b id="hudTitle"></b><i id="hudEn"></i></span>
+          </div>
+          <div id="hudClock" class="clock"></div>
+          <div id="hudRail" class="rail"></div>
+        </div>
+
+        <div id="caption" aria-live="polite">
+          <span id="capWho" class="who"></span>
+          <span id="capText" class="txt"></span>
+        </div>
+
+        <div id="titleUi">
+          <p class="kicker">1917년 4월 6일 · 프랑스 북부, 서부 전선</p>
+          <p class="hint"><b>화면을 길게 누르거나 스페이스 바를 누르고 있으면</b> 봉인이 뜯어집니다</p>
+          <div class="titleButtons">
+            <button id="btnChapters" type="button">장면 선택</button>
+          </div>
+        </div>
+
+        <div id="gameIntro" hidden>
+          <p class="big">데번셔 연대 2대대의 참호. 1차 공격이 이미 시작되었다.</p>
+          <p>포탄과 돌격하는 병사들을 피해 <b>오른쪽 끝의 매켄지 대령</b>에게 달려라.</p>
+          <p class="keys"><kbd>←↑↓→</kbd>/<kbd>WASD</kbd> 이동 · <kbd>Shift</kbd>/<kbd>Space</kbd> 전력 질주</p>
+          <p class="keys touchOnly">화면 왼쪽을 끌어 이동 · 오른쪽을 누르고 있으면 전력 질주</p>
+        </div>
+
+        <button id="btnMute" type="button" class="iconBtn" aria-label="소리 끄기" title="소리 (M)">♪</button>
+      </div>
+
+      <div id="joy" hidden><div id="joyKnob"></div></div>
+      <div id="sprintZone" hidden>질주</div>
+
+      <div id="letter" class="panel paper" hidden>
+        <p class="stamp">긴급 · URGENT</p>
+        <p class="to">데번셔 연대 2대대장 매켄지 대령 귀하</p>
+        <p id="letterBody" class="body"></p>
+        <p class="sign">— 에린모어 장군</p>
+        <p class="bearer">전달자: 블레이크 상병, 스코필드 상병</p>
+        <p class="tap">눌러서 출발</p>
+      </div>
+
+      <div id="failPanel" class="panel dark" hidden>
+        <p class="eyebrow">XIII · 질주</p>
+        <p id="failReason" class="big"></p>
+        <div class="row">
+          <button id="btnRetry" type="button" class="primary">다시 달린다</button>
+          <button id="btnSkipRun" type="button">결말로 건너뛰기</button>
+        </div>
+        <p id="failNote" class="note"></p>
+      </div>
+
+      <div id="endPanel" class="panel dark" hidden>
+        <p class="eyebrow">끝</p>
+        <p class="big">명령은 전해졌다.</p>
+        <p class="note">모든 그림과 음악은 외부 파일 없이 코드로만 생성되었습니다.<br />영화 〈1917〉(2019)의 주요 장면을 바탕으로 한 팬 메이드 재구성입니다.</p>
+        <div class="row">
+          <button id="btnAgain" type="button" class="primary">처음부터</button>
+          <button id="btnRunAgain" type="button">질주만 다시</button>
+        </div>
+      </div>
+
+      <div id="chapterPanel" class="panel dark" hidden>
+        <p class="eyebrow">장면 선택</p>
+        <ol id="chapterList"></ol>
+        <div class="row"><button id="btnCloseChapters" type="button">닫기</button></div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

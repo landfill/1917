@@ -1,0 +1,325 @@
+/* 한 가지 분위기만 쓰는 어두운 영화관 화면. 외부 폰트 없이 시스템 글꼴만 사용한다. */
+:root {
+  --ink: #0b0a0c;
+  --paper: #e9dcbc;
+  --paper-d: #b9a67d;
+  --ember: #d9793a;
+  --blood: #9a2621;
+  --mute: #8d8577;
+  --sans: 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', 'Noto Sans CJK KR', system-ui, sans-serif;
+  --serif: 'AppleMyungjo', 'Nanum Myeongjo', 'Batang', 'Noto Serif KR', 'Noto Serif CJK KR', Georgia, serif;
+  --mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--sans);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+body { overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+
+#app {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
+#stage {
+  position: relative;
+  width: min(100vw, calc(100dvh * 16 / 9));
+  aspect-ratio: 16 / 9;
+  max-width: 100%;
+  container-type: inline-size;
+  background: #000;
+}
+
+#screen {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* ── HUD ─────────────────────────── */
+#hud {
+  position: absolute;
+  inset: 0 0 auto 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.6cqw 2.2cqw;
+  pointer-events: none;
+  transition: opacity 0.6s;
+}
+#hud.dim { opacity: 0; }
+.chapter { display: flex; align-items: baseline; gap: 1cqw; text-shadow: 0 1px 0 #000, 0 0 6px #000; }
+.chapter .num { font-family: var(--serif); font-size: clamp(14px, 2.6cqw, 30px); color: var(--paper); letter-spacing: 0.04em; }
+.chapter .names { display: flex; flex-direction: column; line-height: 1.15; }
+.chapter b { font-weight: 600; font-size: clamp(11px, 1.55cqw, 17px); }
+.chapter i { font-style: normal; font-family: var(--mono); font-size: clamp(8px, 0.95cqw, 11px); letter-spacing: 0.18em; color: var(--mute); }
+.clock {
+  font-family: var(--mono);
+  font-size: clamp(10px, 1.3cqw, 15px);
+  letter-spacing: 0.08em;
+  padding: 0.35em 0.7em;
+  border: 1px solid rgba(233, 220, 188, 0.35);
+  background: rgba(0, 0, 0, 0.35);
+  font-variant-numeric: tabular-nums;
+  margin-right: 4.2cqw;
+}
+.rail {
+  position: absolute;
+  left: 2.2cqw;
+  right: 2.2cqw;
+  top: 0.6cqw;
+  display: grid;
+  grid-template-columns: repeat(15, 1fr);
+  gap: 3px;
+}
+.rail span { height: 2px; background: rgba(233, 220, 188, 0.18); }
+.rail span.done { background: rgba(233, 220, 188, 0.55); }
+.rail span.now { background: var(--ember); }
+
+/* ── 자막 ─────────────────────────── */
+/* 자막은 아래쪽 레터박스(16/180) 안에 들어간다 */
+#caption {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  height: calc(100% * 16 / 180);
+  transform: translateX(-50%);
+  width: min(92%, 70em);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8em;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s;
+  text-shadow: 0 1px 0 #000, 0 0 8px #000, 0 0 2px #000;
+}
+#caption.on { opacity: 1; }
+#caption .who {
+  flex: none;
+  font-family: var(--mono);
+  font-size: clamp(9px, 1.05cqw, 13px);
+  letter-spacing: 0.18em;
+  color: var(--ember);
+}
+#caption .who:empty { display: none; }
+#caption .txt {
+  font-size: clamp(12px, 1.75cqw, 22px);
+  line-height: 1.3;
+  font-weight: 500;
+  word-break: keep-all;
+}
+
+/* ── 타이틀 ───────────────────────── */
+#titleUi {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 2cqw 3cqw;
+}
+#titleUi .kicker {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: clamp(10px, 1.35cqw, 15px);
+  letter-spacing: 0.12em;
+  color: rgba(233, 220, 188, 0.7);
+  text-align: center;
+}
+#titleUi .hint {
+  margin: 0 auto 1cqw;
+  font-size: clamp(11px, 1.4cqw, 16px);
+  color: rgba(233, 220, 188, 0.75);
+  text-align: center;
+  word-break: keep-all;
+  max-width: 34em;
+}
+#titleUi .hint b { color: var(--paper); font-weight: 600; }
+.titleButtons { position: absolute; right: 2cqw; bottom: 2cqw; pointer-events: auto; }
+
+/* ── 버튼 ─────────────────────────── */
+button {
+  font: inherit;
+  font-size: clamp(12px, 1.3cqw, 15px);
+  color: var(--paper);
+  background: rgba(10, 9, 11, 0.6);
+  border: 1px solid rgba(233, 220, 188, 0.45);
+  padding: 0.55em 1.1em;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+}
+button:hover { border-color: var(--paper); background: rgba(233, 220, 188, 0.08); }
+button:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+button.primary { background: var(--paper); color: var(--ink); border-color: var(--paper); font-weight: 700; }
+button.primary:hover { background: #fff3d6; }
+
+.iconBtn {
+  position: absolute;
+  top: 1.4cqw;
+  right: 1.6cqw;
+  width: 2.8em;
+  height: 2.8em;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  font-size: clamp(11px, 1.2cqw, 14px);
+  z-index: 5;
+}
+.iconBtn.off { color: var(--mute); text-decoration: line-through; }
+
+/* ── 패널 (편지, 실패, 엔딩, 장면 선택) ── */
+.panel {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(92vw, 34rem);
+  max-height: 90dvh;
+  overflow: auto;
+  padding: 1.6rem 1.7rem;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.panel p { margin: 0; }
+.panel.dark { background: rgba(12, 11, 13, 0.92); border: 1px solid rgba(233, 220, 188, 0.3); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6); }
+.panel .eyebrow { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.25em; color: var(--ember); }
+.panel .big { font-family: var(--serif); font-size: 1.35rem; line-height: 1.5; word-break: keep-all; text-wrap: balance; }
+.panel .note { font-size: 0.85rem; color: var(--mute); line-height: 1.6; word-break: keep-all; }
+.panel .row { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.4rem; }
+
+.paper {
+  color: #2e2419;
+  background:
+    repeating-linear-gradient(0deg, rgba(120, 95, 60, 0.07) 0 1px, transparent 1px 28px),
+    radial-gradient(ellipse at 30% 20%, #f3e9cf, #e4d4ac 70%, #d2bd8d);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7), inset 0 0 40px rgba(110, 80, 40, 0.25);
+  font-family: var(--serif);
+  cursor: pointer;
+  animation: unfold 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes unfold {
+  from { transform: translate(-50%, -40%) scaleY(0.2); opacity: 0; }
+  to { transform: translate(-50%, -50%) scaleY(1); opacity: 1; }
+}
+.paper .stamp {
+  align-self: flex-end;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  color: var(--blood);
+  border: 2px solid var(--blood);
+  padding: 0.2em 0.6em;
+  transform: rotate(-4deg);
+}
+.paper .to { font-size: 0.95rem; border-bottom: 1px solid rgba(46, 36, 25, 0.3); padding-bottom: 0.5rem; }
+.paper .body { font-size: 1.15rem; line-height: 1.85; min-height: 7.5em; white-space: pre-line; word-break: keep-all; }
+.paper .sign { text-align: right; font-style: italic; }
+.paper .bearer { font-size: 0.8rem; color: #6b5a44; }
+.paper .tap { font-family: var(--sans); font-size: 0.8rem; color: #6b5a44; text-align: center; letter-spacing: 0.1em; animation: blink 1.6s infinite; }
+@keyframes blink { 50% { opacity: 0.3; } }
+
+#chapterList { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: 0.4rem; }
+#chapterList button { width: 100%; text-align: left; display: flex; gap: 0.7em; align-items: baseline; }
+#chapterList .n { font-family: var(--serif); color: var(--ember); min-width: 2.4em; }
+#chapterList .game { color: var(--ember); font-size: 0.8em; margin-left: auto; }
+
+/* ── 게임 안내 ─────────────────────── */
+#gameIntro {
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  transform: translateX(-50%);
+  width: min(90%, 46em);
+  text-align: center;
+  pointer-events: none;
+  font-size: clamp(11px, 1.45cqw, 16px);
+  line-height: 1.6;
+  text-shadow: 0 1px 0 #000, 0 0 8px #000;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 1em 1.4em;
+  word-break: keep-all;
+}
+#gameIntro p { margin: 0.2em 0; }
+#gameIntro .big { font-family: var(--serif); font-size: 1.25em; color: var(--paper); }
+#gameIntro b { color: #f2d38a; }
+kbd { font-family: var(--mono); font-size: 0.85em; border: 1px solid rgba(233, 220, 188, 0.5); padding: 0 0.35em; border-bottom-width: 2px; }
+.touchOnly { display: none; }
+@media (pointer: coarse) {
+  .touchOnly { display: block; }
+  #gameIntro .keys:not(.touchOnly) { display: none; }
+}
+
+/* ── 터치 조작 ─────────────────────── */
+#joy {
+  position: fixed;
+  width: 110px;
+  height: 110px;
+  margin: -55px 0 0 -55px;
+  border-radius: 50%;
+  border: 2px solid rgba(233, 220, 188, 0.35);
+  background: rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  z-index: 15;
+}
+#joyKnob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  border-radius: 50%;
+  background: rgba(233, 220, 188, 0.55);
+}
+#sprintZone {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: max(20px, env(safe-area-inset-bottom, 0px));
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(233, 220, 188, 0.45);
+  background: rgba(0, 0, 0, 0.35);
+  font-weight: 700;
+  pointer-events: none;
+  z-index: 15;
+}
+#sprintZone.on { background: rgba(217, 121, 58, 0.55); }
+
+/* 세로 화면: 자막을 화면 아래로 뺀다 */
+@media (max-aspect-ratio: 5/4) {
+  #caption { top: calc(100% + 14px); bottom: auto; height: auto; width: 100%; padding: 0 16px; flex-direction: column; gap: 0.3em; }
+  #caption .txt { font-size: 16px; }
+  #caption .who { font-size: 11px; }
+  #titleUi .hint { position: absolute; top: calc(100% + 14px); left: 16px; right: 16px; }
+  #gameIntro { top: calc(100% + 10px); width: 100%; font-size: 13px; }
+  .clock { margin-right: 5.5cqw; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paper, .paper .tap { animation: none; }
+}

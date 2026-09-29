@@ -1,0 +1,17 @@
+{
+  "name": "1917-pixel",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "영화 1917의 주요 장면을 2D 픽셀로 재구성한 웹앱. 모든 그래픽과 음악은 코드로 생성된다.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build && node scripts/inline.mjs",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^7.3.6"
+  }
+}
