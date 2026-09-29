@@ -461,8 +461,8 @@ export const sceneBlake: StoryScene = {
     g.save();
     g.translate(160, 150);
     g.scale(2, 2);
-    soldier(g, 12, 0, { pose: 'lie', face: -1, bare: true });
-    soldier(g, -14, 0, { pose: 'kneel', face: 1, rifle: false, mark: true });
+    soldier(g, 12, 0, { pose: 'lie', face: -1, bare: true, outline: false });
+    soldier(g, -14, 0, { pose: 'kneel', face: 1, rifle: false, mark: true, outline: false });
     g.restore();
     // 흩날리는 벚꽃
     for (let i = 0; i < 26; i++) {

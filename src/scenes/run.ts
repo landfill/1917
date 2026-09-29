@@ -325,7 +325,7 @@ export const sceneRun: GameScene = {
         const px = p.x - cam;
         const speed = Math.hypot(p.vx, p.vy);
         const pose = !st.started ? 'climb' : p.stun > 0 ? 'fall' : speed > 70 ? 'run' : speed > 8 ? 'walk' : 'stand';
-        soldier(g, px, p.y, { pose, face: p.face, phase: p.phase, mark: true, bare: true, outline: '#f1dfa8' });
+        soldier(g, px, p.y, { pose, face: p.face, phase: p.phase, mark: true, bare: true, outline: '#f1dfa8', outlineAlpha: 0.7 });
         // 스코필드 표시
         if (st.started && p.stun <= 0) {
           P(g, px, p.y - 25, '#f2e3b3');

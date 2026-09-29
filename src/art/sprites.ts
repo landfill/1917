@@ -1,5 +1,5 @@
 // 인물·사물 스프라이트. 비트맵 없이 사각형 조합으로 그린다.
-import { Ctx, R, P, disc, line, rng, hash } from '../core/gfx';
+import { Ctx, R, P, disc, line, rng, hash, makeCanvas } from '../core/gfx';
 
 export const PAL = {
   ink: '#0d0c0b',
@@ -46,13 +46,28 @@ export interface SoldierOpt {
   bare?: boolean;
   /** 외곽선 색. false면 외곽선 없음 (기본: 짙은 갈색) */
   outline?: string | false;
+  /** 외곽선 불투명도 (기본 0.42) */
+  outlineAlpha?: number;
   /** 발밑 그림자 (기본: 켜짐) */
   shadow?: boolean;
 }
 
-/** 배경과 인물을 떼어 놓는 1px 외곽선 색 */
+/** 배경과 인물을 떼어 놓는 1px 외곽선 색과 불투명도 (반투명이라 화면에서 굵게 튀지 않는다) */
 export const OUTLINE = '#140f0a';
+const OUTLINE_ALPHA = 0.42;
 const RING: [number, number][] = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+
+// 외곽선은 작은 버퍼에 불투명하게 모아 그린 뒤 한 번에 반투명으로 얹는다 (겹친 곳만 진해지는 얼룩 방지)
+const OB = makeCanvas(56, 56);
+const OX = 28, OY = 44;
+function outlined(g: Ctx, x: number, y: number, alpha: number, draw: (b: Ctx, dx: number, dy: number) => void): void {
+  OB.g.clearRect(0, 0, 56, 56);
+  for (const [dx, dy] of RING) draw(OB.g, OX + dx, OY + dy);
+  g.save();
+  g.globalAlpha *= alpha;
+  g.drawImage(OB.c, Math.round(x) - OX, Math.round(y) - OY);
+  g.restore();
+}
 
 function groundShadow(g: Ctx, x: number, y: number, r = 5): void {
   g.save();
@@ -69,7 +84,8 @@ export function soldier(g: Ctx, x: number, y: number, o: SoldierOpt = {}): void 
     const p = o.pose ?? 'stand';
     if (o.shadow !== false && p !== 'lie' && p !== 'fall' && p !== 'sit') groundShadow(g, x, y);
     const sil = o.outline ?? OUTLINE;
-    for (const [dx, dy] of RING) soldier(g, x + dx, y + dy, { ...o, sil, outline: false });
+    const a = o.outlineAlpha ?? OUTLINE_ALPHA;
+    outlined(g, x, y, a, (b, bx, by) => soldier(b, bx, by, { ...o, sil, outline: false, shadow: false }));
   }
   const f = o.face ?? 1;
   const pose = o.pose ?? 'stand';
@@ -474,7 +490,7 @@ export function soldierBack(g: Ctx, x: number, y: number, phase: number, alpha =
   y = Math.round(y);
   if (alpha < 1) g.globalAlpha = alpha;
   groundShadow(g, x, y);
-  for (const [dx, dy] of RING) backBody(g, x + dx, y + dy, phase, OUTLINE);
+  outlined(g, x, y, OUTLINE_ALPHA, (b, bx, by) => backBody(b, bx, by, phase, OUTLINE));
   backBody(g, x, y, phase);
   g.globalAlpha = 1;
 }
