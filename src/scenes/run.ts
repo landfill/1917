@@ -270,7 +270,7 @@ export const sceneRun: GameScene = {
       line(g, x, 98, x + 10, 99, '#2b2525');
     }
     // 진흙 들판
-    const mud = mudStrip('run', WORLD + W, BOT - TOP + 22, 99);
+    const mud = mudStrip('run2', WORLD + W, BOT - TOP + 22, 99, ['#3b332c', '#29231e', '#4d443b']);
     g.drawImage(mud, -cam, TOP - 6);
     // 포탄 구덩이
     for (const c of st.craters) {
@@ -325,7 +325,7 @@ export const sceneRun: GameScene = {
         const px = p.x - cam;
         const speed = Math.hypot(p.vx, p.vy);
         const pose = !st.started ? 'climb' : p.stun > 0 ? 'fall' : speed > 70 ? 'run' : speed > 8 ? 'walk' : 'stand';
-        soldier(g, px, p.y, { pose, face: p.face, phase: p.phase, mark: true, bare: true });
+        soldier(g, px, p.y, { pose, face: p.face, phase: p.phase, mark: true, bare: true, outline: '#f1dfa8' });
         // 스코필드 표시
         if (st.started && p.stun <= 0) {
           P(g, px, p.y - 25, '#f2e3b3');

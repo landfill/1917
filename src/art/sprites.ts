@@ -5,12 +5,12 @@ export const PAL = {
   ink: '#0d0c0b',
   skin: '#c99a78',
   skinD: '#8f6a52',
-  khaki: '#7d6c47',
-  khakiD: '#5b4e33',
-  khakiL: '#9a8a60',
-  helmet: '#5f5c3f',
-  helmetL: '#7b7853',
-  putty: '#4c4230',
+  khaki: '#a08752',
+  khakiD: '#6e5a37',
+  khakiL: '#bea46c',
+  helmet: '#737050',
+  helmetL: '#98946a',
+  putty: '#5e5036',
   boot: '#2a211a',
   grey: '#6d7266',
   greyD: '#4f544b',
@@ -44,12 +44,33 @@ export interface SoldierOpt {
   /** 인물 구분용 표식 — 스코필드는 소매에 흰 띠 */
   mark?: boolean;
   bare?: boolean;
+  /** 외곽선 색. false면 외곽선 없음 (기본: 짙은 갈색) */
+  outline?: string | false;
+  /** 발밑 그림자 (기본: 켜짐) */
+  shadow?: boolean;
+}
+
+/** 배경과 인물을 떼어 놓는 1px 외곽선 색 */
+export const OUTLINE = '#140f0a';
+const RING: [number, number][] = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+
+function groundShadow(g: Ctx, x: number, y: number, r = 5): void {
+  g.save();
+  g.globalAlpha *= 0.35;
+  disc(g, x, y, r, '#000000', 0.35);
+  g.restore();
 }
 
 /**
  * 병사 한 명. (x, y)는 발밑 중앙. 키 약 20px.
  */
 export function soldier(g: Ctx, x: number, y: number, o: SoldierOpt = {}): void {
+  if (!o.sil && o.outline !== false) {
+    const p = o.pose ?? 'stand';
+    if (o.shadow !== false && p !== 'lie' && p !== 'fall' && p !== 'sit') groundShadow(g, x, y);
+    const sil = o.outline ?? OUTLINE;
+    for (const [dx, dy] of RING) soldier(g, x + dx, y + dy, { ...o, sil, outline: false });
+  }
   const f = o.face ?? 1;
   const pose = o.pose ?? 'stand';
   const side = o.side ?? 'brit';
@@ -153,7 +174,7 @@ export function soldier(g: Ctx, x: number, y: number, o: SoldierOpt = {}): void 
   }
   // 배낭
   if (o.pack ?? side !== 'general') {
-    r(-4 + tx, -15 + by, 2, 5, s ?? (side === 'german' ? '#4a4a3e' : '#57492f'));
+    r(-4 + tx, -15 + by, 2, 5, s ?? (side === 'german' ? '#4a4a3e' : '#6b5836'));
   }
   // 팔
   if (pose === 'aim') {
@@ -452,27 +473,34 @@ export function soldierBack(g: Ctx, x: number, y: number, phase: number, alpha =
   x = Math.round(x);
   y = Math.round(y);
   if (alpha < 1) g.globalAlpha = alpha;
+  groundShadow(g, x, y);
+  for (const [dx, dy] of RING) backBody(g, x + dx, y + dy, phase, OUTLINE);
+  backBody(g, x, y, phase);
+  g.globalAlpha = 1;
+}
+
+function backBody(g: Ctx, x: number, y: number, phase: number, sil?: string): void {
+  const c = (col: string) => sil ?? col;
   const sw = Math.sin(phase * Math.PI * 2);
   const la = Math.round(sw * 2);
   const bob = Math.abs(Math.round(Math.cos(phase * Math.PI * 2)));
   // 다리: 번갈아 들린다
-  R(g, x - 2, y - 7 - Math.max(0, la) - bob, 2, 7 + Math.max(0, la) - Math.max(0, la), PAL.putty);
-  R(g, x + 1, y - 7 - Math.max(0, -la) - bob, 2, 7, PAL.putty);
-  R(g, x - 2, y - 1 - Math.max(0, la) * 2 - bob, 2, 1, PAL.boot);
-  R(g, x + 1, y - 1 - Math.max(0, -la) * 2 - bob, 2, 1, PAL.boot);
+  R(g, x - 2, y - 7 - Math.max(0, la) - bob, 2, 7 + Math.max(0, la) - Math.max(0, la), c(PAL.putty));
+  R(g, x + 1, y - 7 - Math.max(0, -la) - bob, 2, 7, c(PAL.putty));
+  R(g, x - 2, y - 1 - Math.max(0, la) * 2 - bob, 2, 1, c(PAL.boot));
+  R(g, x + 1, y - 1 - Math.max(0, -la) * 2 - bob, 2, 1, c(PAL.boot));
   // 몸통과 배낭
-  R(g, x - 3, y - 15 - bob, 7, 8, PAL.khaki);
-  R(g, x - 2, y - 14 - bob, 5, 5, '#57492f');
-  R(g, x - 3, y - 9 - bob, 7, 1, PAL.khakiD);
+  R(g, x - 3, y - 15 - bob, 7, 8, c(PAL.khaki));
+  R(g, x - 2, y - 14 - bob, 5, 5, c('#6b5836'));
+  R(g, x - 3, y - 9 - bob, 7, 1, c(PAL.khakiD));
   // 팔
-  R(g, x - 4, y - 14 - bob + la, 1, 5, PAL.khakiD);
-  R(g, x + 4, y - 14 - bob - la, 1, 5, PAL.khakiD);
+  R(g, x - 4, y - 14 - bob + la, 1, 5, c(PAL.khakiD));
+  R(g, x + 4, y - 14 - bob - la, 1, 5, c(PAL.khakiD));
   // 소총 (비스듬히)
-  line(g, x + 4, y - 12 - bob, x + 7, y - 21 - bob, PAL.rifle);
+  line(g, x + 4, y - 12 - bob, x + 7, y - 21 - bob, c(PAL.rifle));
   // 목과 철모
-  R(g, x - 1, y - 17 - bob, 3, 2, PAL.skinD);
-  R(g, x - 4, y - 18 - bob, 9, 1, PAL.helmet);
-  R(g, x - 2, y - 20 - bob, 5, 2, PAL.helmet);
-  R(g, x - 1, y - 20 - bob, 3, 1, PAL.helmetL);
-  g.globalAlpha = 1;
+  R(g, x - 1, y - 17 - bob, 3, 2, c(PAL.skinD));
+  R(g, x - 4, y - 18 - bob, 9, 1, c(PAL.helmet));
+  R(g, x - 2, y - 20 - bob, 5, 2, c(PAL.helmet));
+  R(g, x - 1, y - 20 - bob, 3, 1, c(PAL.helmetL));
 }

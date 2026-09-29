@@ -229,7 +229,7 @@ export const sceneNoMansLand: StoryScene = {
       const x = ((i * 47 - camX * 0.3) % 360 + 360) % 360 - 20;
       R(g, x, 90, 1, 6, '#39342a');
     }
-    const mud = mudStrip('nml', 640, 80, 7);
+    const mud = mudStrip('nml2', 640, 80, 7, ['#3b332c', '#29231e', '#4d443b']);
     const mx = -((camX) % 640);
     g.drawImage(mud, mx, 98);
     g.drawImage(mud, mx + 640, 98);
